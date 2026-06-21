@@ -23,6 +23,7 @@ ADMIN_CHAT_ID = os.environ["ADMIN_CHAT_ID"]  # deine eigene Chat-ID (siehe READM
 
 ACCESS_PRICE_STARS = 1300          # Preis für 1 Monat Zugang, in Telegram Stars
 ACCESS_PRICE_EUR_HINT = "14,74€"
+LOGO_PATH = "logo.png"             # Bild-Datei, muss im selben Ordner wie bot.py liegen
 SUBSCRIPTION_PERIOD = 30 * 24 * 60 * 60  # 30 Tage Gültigkeit pro Zahlung
 
 CHECK_INTERVAL = 60 * 60       # wie oft geprüft wird (in Sekunden) – hier: stündlich
@@ -37,7 +38,7 @@ REMINDER_TEXT = (
 
 # Deine Anleitung:
 WELCOME_TEXT = (
-    "👋 Schön, dass du dabei sein möchtest!\n\n"
+    "Herzlich willkommen bei REDFLAG DISTRICT 🚩 Schön das du dabei sein möchtest 🤞🏻\n\n"
     "Nur noch ein letzter Schritt, dann bist du drin:\n\n"
     f"1. Du bekommst gleich eine Rechnung über {ACCESS_PRICE_STARS} Telegram Stars "
     f"({ACCESS_PRICE_EUR_HINT}) für 1 Monat Zugang\n"
@@ -66,10 +67,12 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # user_chat_id erlaubt dem Bot, die Person direkt anzuschreiben,
         # auch wenn sie den Bot vorher nie gestartet hat.
-        await context.bot.send_message(
-            chat_id=req.user_chat_id,
-            text=WELCOME_TEXT,
-        )
+        with open(LOGO_PATH, "rb") as photo:
+            await context.bot.send_photo(
+                chat_id=req.user_chat_id,
+                photo=photo,
+                caption=WELCOME_TEXT,
+            )
         await context.bot.send_invoice(
             chat_id=req.user_chat_id,
             title="Gruppenzugang – 1 Monat",
