@@ -32,8 +32,8 @@ REMINDER_BEFORE = 3 * 24 * 60 * 60  # Erinnerung X Sekunden vor Ablauf senden �
 
 REMINDER_TEXT = (
     "⏰ Dein Zugang läuft in Kürze ab!\n\n"
-    "Bitte kauf rechtzeitig genug Telegram Stars nach, damit die automatische "
-    "Verlängerung klappt – sonst wirst du nach Ablauf aus der Gruppe entfernt."
+    "Bezahl die folgende Rechnung, um weitere 30 Tage Zugang zu bekommen – "
+    "sonst wirst du nach Ablauf aus der Gruppe entfernt."
 )
 
 # Deine Anleitung:
@@ -76,11 +76,10 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_invoice(
             chat_id=req.user_chat_id,
             title="Gruppenzugang – 1 Monat",
-            description=f"Monatlicher Zugang zu \"{req.chat.title}\" ({ACCESS_PRICE_EUR_HINT})",
+            description=f"Zugang zu \"{req.chat.title}\" für 1 Monat ({ACCESS_PRICE_EUR_HINT})",
             payload=f"access_{req.chat.id}_{user.id}",
             currency="XTR",
             prices=[LabeledPrice("1 Monat Zugang", ACCESS_PRICE_STARS)],
-            subscription_period=SUBSCRIPTION_PERIOD,
         )
     except Exception as e:
         logger.warning(f"Konnte Anfragenden nicht anschreiben: {e}")
@@ -92,10 +91,9 @@ async def pre_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Wird bei JEDER Stars-Zahlung ausgelöst – Erstzahlung und monatliche Verlängerung."""
+    """Wird bei jeder Stars-Zahlung ausgelöst (Erstzahlung oder erneute Zahlung für Verlängerung)."""
     user = update.effective_user
-    payment = update.message.successful_payment
-    expires_at = payment.subscription_expiration_date
+    expires_at = int(time.time()) + SUBSCRIPTION_PERIOD  # 30 Tage ab jetzt selbst berechnet
     username = f"@{user.username}" if user.username else f"{user.full_name} (kein Username)"
 
     if user.id in pending:
@@ -131,12 +129,11 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Unbekannte Zahlung, sollte normalerweise nicht vorkommen
         return
 
-    if expires_at:
-        active_subscriptions[user.id] = {
-            "chat_id": chat_id,
-            "expires_at": expires_at,
-            "reminder_sent": False,
-        }
+    active_subscriptions[user.id] = {
+        "chat_id": chat_id,
+        "expires_at": expires_at,
+        "reminder_sent": False,
+    }
 
     try:
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=admin_text)
@@ -148,11 +145,19 @@ async def check_subscriptions(context: ContextTypes.DEFAULT_TYPE):
     """Läuft regelmäßig im Hintergrund: erinnert vor Ablauf und entfernt bei Nicht-Verlängerung."""
     now = int(time.time())
 
-    # 1. Erinnerungen verschicken
+    # 1. Erinnerungen verschicken (inkl. neuer Rechnung zum Verlängern)
     for uid, info in active_subscriptions.items():
         if not info["reminder_sent"] and now >= info["expires_at"] - REMINDER_BEFORE:
             try:
                 await context.bot.send_message(chat_id=uid, text=REMINDER_TEXT)
+                await context.bot.send_invoice(
+                    chat_id=uid,
+                    title="Gruppenzugang – Verlängerung",
+                    description=f"Weitere 30 Tage Zugang ({ACCESS_PRICE_EUR_HINT})",
+                    payload=f"renew_{info['chat_id']}_{uid}",
+                    currency="XTR",
+                    prices=[LabeledPrice("30 Tage Verlängerung", ACCESS_PRICE_STARS)],
+                )
                 info["reminder_sent"] = True
             except Exception as e:
                 logger.warning(f"Konnte Erinnerung an {uid} nicht senden: {e}")
