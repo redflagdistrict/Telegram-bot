@@ -121,6 +121,7 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Einfach eintippen und abschicken! 📩 "
                 "(Der Code besteht aus 32 Ziffern)\n\n"
                 "Du wirst danach schnellstmöglich freigeschaltet.\n\n"
+                "Sollten Fragen oder Probleme auftreten, melde dich gerne beim Admin: @redflagdistrict_de\n\n"
                 "Wir freuen uns auf dich! 🎉"
             ),
         )
