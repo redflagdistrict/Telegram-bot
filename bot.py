@@ -1,6 +1,7 @@
 import logging
 import os
 import csv
+import json
 from datetime import datetime
 
 from telegram import Update
@@ -23,13 +24,41 @@ ADMIN_CHAT_ID = os.environ["ADMIN_CHAT_ID"]
 
 RULES_URL = "https://tinyurl.com/REDFLAGDISTRICT"  # Link zum Gutschein
 
-CSV_FILE = "codes.csv"  # Wird auf dem Server gespeichert
+CSV_FILE = "codes.csv"          # Wird auf dem Server gespeichert
+PENDING_FILE = "pending.json"   # Warteliste wird hier gespeichert
 # ---------------------------------------------------------------------------
 
-# user_id -> {"group_chat_id": ..., "group_title": ...}
-pending = {}
+
+# ---------------------------------------------------------------------------
+# Warteliste: laden & speichern
+# ---------------------------------------------------------------------------
+def load_pending() -> dict:
+    """Lädt die Warteliste aus der JSON-Datei."""
+    if os.path.isfile(PENDING_FILE):
+        try:
+            with open(PENDING_FILE, "r", encoding="utf-8") as f:
+                return {int(k): v for k, v in json.load(f).items()}
+        except Exception as e:
+            logger.warning(f"Warteliste konnte nicht geladen werden: {e}")
+    return {}
 
 
+def save_pending(pending: dict):
+    """Speichert die Warteliste in die JSON-Datei."""
+    try:
+        with open(PENDING_FILE, "w", encoding="utf-8") as f:
+            json.dump(pending, f, ensure_ascii=False)
+    except Exception as e:
+        logger.warning(f"Warteliste konnte nicht gespeichert werden: {e}")
+
+
+# Beim Start laden
+pending = load_pending()
+
+
+# ---------------------------------------------------------------------------
+# CSV-Hilfsfunktion
+# ---------------------------------------------------------------------------
 def save_to_csv(telegram_username, submitted_code, group_title):
     """Speichert einen neuen Eintrag in die CSV-Datei."""
     file_exists = os.path.isfile(CSV_FILE)
@@ -45,6 +74,9 @@ def save_to_csv(telegram_username, submitted_code, group_title):
         ])
 
 
+# ---------------------------------------------------------------------------
+# Handler
+# ---------------------------------------------------------------------------
 async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Wird ausgelöst, sobald jemand eine Beitrittsanfrage stellt."""
     req = update.chat_join_request
@@ -56,6 +88,7 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "group_chat_id": req.chat.id,
         "group_title": req.chat.title,
     }
+    save_pending(pending)
 
     try:
         with open("logo.png", "rb") as photo:
@@ -63,8 +96,8 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=req.user_chat_id,
                 photo=photo,
                 caption=(
-                    "Herzlich willkommen bei **REDFLAG DISTRICT** 🚩\n\n"
-                    "Schön, dass du dabei sein möchtest!\n\n"
+                    "Herzlich Willkommen bei **REDFLAG DISTRICT** 🚩\n\n"
+                    "Schön, dass du dabei sein möchtest! Im District geht es gerade ganz schön heiß her 🔥 Der Albtraum jeder REDFLAG 😈!\n\n"
                     "Nur noch ein kleiner Schritt, dann bist du drin 👇"
                 ),
             )
@@ -82,8 +115,13 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=req.user_chat_id,
             text=(
                 "✍️ **Schritt 2:**\n"
-                "Gib den Code, den du nach Abschluss bekommen hast, einfach hier unten ein.\n\n"
-                "Du wirst danach schnellstmöglich freigeschaltet."
+                "Schreib den Code, den du nach dem Kauf erhalten hast, "
+                "einfach als normale Nachricht hier in diesen Chat – "
+                "also genau so, wie du gerade mir schreiben würdest. "
+                "Einfach eintippen und abschicken! 📩 "
+                "(Der Code besteht aus 32 Ziffern)\n\n"
+                "Du wirst danach schnellstmöglich freigeschaltet.\n\n"
+                "Wir freuen uns auf dich! 🎉"
             ),
         )
     except Exception as e:
@@ -97,6 +135,8 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     data = pending.pop(user.id)
+    save_pending(pending)
+
     submitted_code = update.message.text.strip()
 
     # Bestätigung an den User
@@ -147,6 +187,9 @@ async def send_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+# ---------------------------------------------------------------------------
+# Start
+# ---------------------------------------------------------------------------
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
