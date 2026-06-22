@@ -115,16 +115,26 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=req.user_chat_id,
             text=(
                 "✍️ **Schritt 2:**\n"
-                "Schreib den Code, den du nach dem Kauf erhalten hast, "
-                "einfach als normale Nachricht hier in diesen Chat – "
-                "also genau so, wie du gerade mir schreiben würdest. "
-                "Einfach eintippen und abschicken! 📩 "
+                "Kopiere den Code, den du nach dem Kauf erhalten hast, "
+                "und füge ihn als normale Nachricht unten im Chat ein – "
+                "also genau so, wie du gerade mit mir schreiben würdest. "
+                "Einfach einfügen und abschicken! 📩 "
                 "(Der Code besteht aus 32 Ziffern)\n\n"
                 "Du wirst danach schnellstmöglich freigeschaltet.\n\n"
-                "Sollten Fragen oder Probleme auftreten, melde dich gerne beim Admin: @redflagdistrict_de\n\n"
+                "🩷 Sollten Fragen oder Probleme auftreten, melde dich gerne beim Admin: @redflagdistrict_de\n\n"
                 "Wir freuen uns auf dich! 🎉"
             ),
         )
+
+        try:
+            with open("code_example.png", "rb") as photo:
+                await context.bot.send_photo(
+                    chat_id=req.user_chat_id,
+                    photo=photo,
+                    caption="👆 So wird es aussehen, wenn du den Gutschein gekauft hast und den Code bekommst. Wo der Pfeil hin zeigt, kannst du ihn kopieren und einfach hier im Telegram Chat unten als Nachricht abschicken ✅",
+                )
+        except Exception as e:
+            logger.warning(f"Code-Beispielbild konnte nicht gesendet werden: {e}")
     except Exception as e:
         logger.warning(f"Konnte Anfragenden nicht anschreiben: {e}")
 
@@ -145,7 +155,8 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ Perfekt! Dein Code wurde übermittelt und wird überprüft.\n\n"
         "Aufgrund des hohen Andrangs kann es bis zu 60 Minuten dauern, "
         "bis du hinzugefügt wirst.\n\n"
-        "Wir freuen uns auf dich! 🎉"
+        "Wir freuen uns auf dich! 🎉\n\n"
+        "🩷 Fragen oder Probleme? Melde dich gerne beim Admin @redflagdistrict_de"
     )
 
     # Telegram-Username für Benachrichtigung
