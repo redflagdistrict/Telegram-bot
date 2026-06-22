@@ -127,7 +127,7 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         try:
-            with open("code_example.png", "rb") as photo:
+            with open("code example.png", "rb") as photo:
                 await context.bot.send_photo(
                     chat_id=req.user_chat_id,
                     photo=photo,
