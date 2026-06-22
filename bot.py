@@ -106,7 +106,8 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=req.user_chat_id,
             text=(
                 "📜 **Schritt 1:**\n"
-                "Klick auf den Link und hol dir deinen Gutschein-Code:\n\n"
+                "Klick auf den Link und hol dir deinen Gutschein-Code.\n"
+                "Den kannst du einfach mit Apple Pay bezahlen 🤍\n\n"
                 f"{RULES_URL}"
             ),
         )
@@ -119,10 +120,7 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "und füge ihn als normale Nachricht unten im Chat ein – "
                 "also genau so, wie du gerade mit mir schreiben würdest. "
                 "Einfach einfügen und abschicken! 📩 "
-                "(Der Code besteht aus 32 Ziffern)\n\n"
-                "Du wirst danach schnellstmöglich freigeschaltet.\n\n"
-                "🩷 Sollten Fragen oder Probleme auftreten, melde dich gerne beim Admin: @redflagdistrict_de\n\n"
-                "Wir freuen uns auf dich! 🎉"
+                "(Der Code besteht aus 32 Ziffern)"
             ),
         )
 
@@ -131,7 +129,13 @@ async def on_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_photo(
                     chat_id=req.user_chat_id,
                     photo=photo,
-                    caption="👆 So wird es aussehen, wenn du den Gutschein gekauft hast und den Code bekommst. Wo der Pfeil hin zeigt, kannst du ihn kopieren und einfach hier im Telegram Chat unten als Nachricht abschicken ✅",
+                    caption=(
+                        "👆 So wird es aussehen, wenn du den Gutschein gekauft hast und den Code bekommst. "
+                        "Wo der Pfeil hin zeigt, kannst du ihn kopieren und einfach hier im Telegram Chat unten als Nachricht abschicken ✅\n\n"
+                        "Du wirst danach freigeschaltet.\n\n"
+                        "🩷 Sollten Fragen oder Probleme auftreten, melde dich gerne beim Admin: @redflagdistrict_de\n\n"
+                        "Wir freuen uns auf dich! 🎉"
+                    ),
                 )
         except Exception as e:
             logger.warning(f"Code-Beispielbild konnte nicht gesendet werden: {e}")
@@ -149,6 +153,17 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_pending(pending)
 
     submitted_code = update.message.text.strip()
+
+    # Länge prüfen
+    if len(submitted_code) != 32:
+        pending[user.id] = data
+        save_pending(pending)
+        await update.message.reply_text(
+            "⚠️ Bitte überprüfe deinen Code auf Vollständigkeit!\n\n"
+            "Der Code muss genau 32 Zeichen lang sein. "
+            "Stelle sicher, dass du den kompletten Code kopiert hast und schick ihn nochmal. 🩷"
+        )
+        return
 
     # Bestätigung an den User
     await update.message.reply_text(
